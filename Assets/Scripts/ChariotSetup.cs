@@ -1,10 +1,12 @@
 using UnityEngine;
-using UnityEngine.InputSystem; 
+using UnityEngine.InputSystem;
 /// <summary>
-/// Builds the entire chariot rig at runtime using Unity primitives.
-/// Attach this to an empty GameObject in the scene and press Play.
+/// Builds the entire chariot rig using Unity primitives.
+/// Attach this to an empty GameObject in the scene.
+/// Use the context menu "Build Rig" to generate in Editor, or press Play.
 /// Creates: Ground, Horse Pair, Chariot Body, Drawbar visuals, Camera setup, Debug HUD.
 /// </summary>
+[ExecuteAlways]
 public class ChariotSetup : MonoBehaviour
 {
     [Header("Build Settings")]
@@ -18,12 +20,58 @@ public class ChariotSetup : MonoBehaviour
     [SerializeField] private Color yokeColor = new Color(0.45f, 0.3f, 0.15f);
     [SerializeField] private Color obstacleColor = new Color(1f, 0.5f, 0f);
 
+    private bool isBuilt = false;
+
     private void Awake()
     {
-        if (buildRigAtRuntime)
+        if (Application.isPlaying && buildRigAtRuntime && !isBuilt)
         {
+            ClearRig();
             BuildRig();
         }
+    }
+
+    [ContextMenu("Build Rig")]
+    public void BuildRigFromEditor()
+    {
+        ClearRig();
+        BuildRig();
+    }
+
+    [ContextMenu("Clear Rig")]
+    public void ClearRig()
+    {
+        // Destroy all children of this object and known root objects
+        string[] rootNames = { "Ground", "HorsePair", "ChariotBody", "TestObstacles" };
+        foreach (string name in rootNames)
+        {
+            GameObject obj = GameObject.Find(name);
+            if (obj != null) SafeDestroy(obj);
+        }
+
+        // Destroy children
+        for (int i = transform.childCount - 1; i >= 0; i--)
+        {
+            SafeDestroy(transform.GetChild(i).gameObject);
+        }
+
+        // Remove ChariotCamera from main camera if present
+        Camera mainCam = Camera.main;
+        if (mainCam != null)
+        {
+            ChariotCamera camScript = mainCam.GetComponent<ChariotCamera>();
+            if (camScript != null) SafeDestroy(camScript);
+        }
+
+        isBuilt = false;
+    }
+
+    private void SafeDestroy(Object obj)
+    {
+        if (Application.isPlaying)
+            Destroy(obj);
+        else
+            DestroyImmediate(obj);
     }
 
     private void BuildRig()
@@ -51,6 +99,7 @@ public class ChariotSetup : MonoBehaviour
         // --- Test obstacles ---
         CreateTestObstacles();
 
+        isBuilt = true;
         Debug.Log("[ChariotSetup] Rig built successfully. Use WASD to drive!");
     }
 
@@ -78,7 +127,7 @@ public class ChariotSetup : MonoBehaviour
     {
         // Main physics body (invisible - the capsule collider is the physics shape)
         GameObject horsePair = new GameObject("HorsePair");
-        horsePair.transform.position = new Vector3(0f, 1f, 3f);
+        horsePair.transform.position = new Vector3(0f, 1f, 6f);
 
         // Rigidbody
         Rigidbody rb = horsePair.AddComponent<Rigidbody>();
@@ -260,9 +309,9 @@ public class ChariotSetup : MonoBehaviour
         GameObject drawbar = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         drawbar.name = "Drawbar";
         drawbar.transform.SetParent(chariotTransform, false);
-        drawbar.transform.localPosition = new Vector3(0f, 0.1f, 2.0f);
+        drawbar.transform.localPosition = new Vector3(0f, 0.1f, 3.5f);
         drawbar.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-        drawbar.transform.localScale = new Vector3(0.08f, 1.5f, 0.08f);
+        drawbar.transform.localScale = new Vector3(0.08f, 3.0f, 0.08f);
         RemoveCollider(drawbar);
         SetColor(drawbar, yokeColor);
 
@@ -270,9 +319,9 @@ public class ChariotSetup : MonoBehaviour
         GameObject leftTrace = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         leftTrace.name = "LeftTrace";
         leftTrace.transform.SetParent(chariotTransform, false);
-        leftTrace.transform.localPosition = new Vector3(-0.4f, 0.1f, 2.2f);
-        leftTrace.transform.localRotation = Quaternion.Euler(85f, 10f, 0f);
-        leftTrace.transform.localScale = new Vector3(0.04f, 1.5f, 0.04f);
+        leftTrace.transform.localPosition = new Vector3(-0.4f, 0.1f, 3.7f);
+        leftTrace.transform.localRotation = Quaternion.Euler(85f, 5f, 0f);
+        leftTrace.transform.localScale = new Vector3(0.04f, 3.0f, 0.04f);
         RemoveCollider(leftTrace);
         SetColor(leftTrace, yokeColor * 0.8f);
 
@@ -280,9 +329,9 @@ public class ChariotSetup : MonoBehaviour
         GameObject rightTrace = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         rightTrace.name = "RightTrace";
         rightTrace.transform.SetParent(chariotTransform, false);
-        rightTrace.transform.localPosition = new Vector3(0.4f, 0.1f, 2.2f);
-        rightTrace.transform.localRotation = Quaternion.Euler(85f, -10f, 0f);
-        rightTrace.transform.localScale = new Vector3(0.04f, 1.5f, 0.04f);
+        rightTrace.transform.localPosition = new Vector3(0.4f, 0.1f, 3.7f);
+        rightTrace.transform.localRotation = Quaternion.Euler(85f, -5f, 0f);
+        rightTrace.transform.localScale = new Vector3(0.04f, 3.0f, 0.04f);
         RemoveCollider(rightTrace);
         SetColor(rightTrace, yokeColor * 0.8f);
     }
@@ -379,7 +428,7 @@ public class ChariotSetup : MonoBehaviour
         Collider col = obj.GetComponent<Collider>();
         if (col != null)
         {
-            Destroy(col);
+            SafeDestroy(col);
         }
     }
 

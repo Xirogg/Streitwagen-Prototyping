@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Unity/Streitwagen-Prototyping/**)",
+      "Read(//c/Unity/Streitwagen-Prototyping/Assets/**)",
+      "Bash(find \"C:\\\\Unity\\\\Streitwagen-Prototyping\\\\Assets\" -type f \\\\\\( -name \"*.asset\" \\\\\\) -exec ls -lh {} \\\\;)"
+    ]
+  }
+}
