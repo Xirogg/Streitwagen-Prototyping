@@ -3,10 +3,15 @@ using UnityEngine.InputSystem;
 
 /// <summary>
 /// Controls the horse pair that pulls the chariot.
-/// Reads WASD input directly from keyboard and applies forces/torque to the Rigidbody.
+/// Reads input directly from keyboard and applies forces/torque to the Rigidbody.
+/// Player 1 (playerIndex=0): WASD
+/// Player 2 (playerIndex=1): Arrow Keys
 /// </summary>
 public class HorseController : MonoBehaviour
 {
+    [Header("Player")]
+    [SerializeField] private int playerIndex = 0;
+
     [Header("Movement")]
     [SerializeField] private float pullForce = 3000f;
     [SerializeField] private float maxSpeed = 12f;
@@ -20,60 +25,95 @@ public class HorseController : MonoBehaviour
     [SerializeField] private float lateralDampingForce = 500f;
 
     [Header("Debug")]
-    [SerializeField] private bool debugLog = true;
+    [SerializeField] private bool debugLog = false;
     private float debugTimer;
 
     private Rigidbody rb;
     private Vector2 moveInput;
 
+    public void SetPlayerIndex(int index)
+    {
+        playerIndex = index;
+    }
+
     private void Awake()
     {
-        rb = GetComponent<Rigidbody>();
-        rb.maxAngularVelocity = maxAngularVelocity;
+        InitRigidbody();
+    }
+
+    private void InitRigidbody()
+    {
+        if (rb == null)
+        {
+            rb = GetComponent<Rigidbody>();
+        }
+        if (rb != null)
+        {
+            rb.maxAngularVelocity = maxAngularVelocity;
+        }
     }
 
     private void Update()
     {
+        if (!Application.isPlaying) return;
+
         Keyboard kb = Keyboard.current;
         if (kb == null) return;
 
         float horizontal = 0f;
         float vertical = 0f;
 
-        if (kb.wKey.isPressed) vertical += 1f;
-        if (kb.sKey.isPressed) vertical -= 1f;
-        if (kb.aKey.isPressed) horizontal -= 1f;
-        if (kb.dKey.isPressed) horizontal += 1f;
-
-        
+        if (playerIndex == 0)
+        {
+            // Player 1: WASD
+            if (kb.wKey.isPressed) vertical += 1f;
+            if (kb.sKey.isPressed) vertical -= 1f;
+            if (kb.aKey.isPressed) horizontal -= 1f;
+            if (kb.dKey.isPressed) horizontal += 1f;
+        }
+        else
+        {
+            // Player 2: Arrow Keys
+            if (kb.upArrowKey.isPressed) vertical += 1f;
+            if (kb.downArrowKey.isPressed) vertical -= 1f;
+            if (kb.leftArrowKey.isPressed) horizontal -= 1f;
+            if (kb.rightArrowKey.isPressed) horizontal += 1f;
+        }
 
         moveInput = new Vector2(horizontal, vertical);
-        FixedUpdate();
-    }
 
+        // Apply forces from Update as well to ensure responsiveness
+        // (forces accumulate and are resolved in the next physics step)
+        ApplyForces();
+    }
 
     private void FixedUpdate()
     {
-        ApplyLocomotion(moveInput.y);
-        ApplySteering(moveInput.x);
+        ApplyForces();
         ApplyLateralDamping();
 
-        // Debug logging every 0.5 seconds
         if (debugLog)
         {
             debugTimer += Time.fixedDeltaTime;
             if (debugTimer >= 0.5f)
             {
                 debugTimer = 0f;
-                float speed = rb.linearVelocity.magnitude;
-                float fwdSpeed = Vector3.Dot(rb.linearVelocity, transform.forward);
-                Debug.Log($"[Horse] Input=({moveInput.x:F1},{moveInput.y:F1}) | " +
+                float speed = rb != null ? rb.linearVelocity.magnitude : -1f;
+                float fwdSpeed = rb != null ? Vector3.Dot(rb.linearVelocity, transform.forward) : -1f;
+                Debug.Log($"[Horse P{playerIndex + 1}] Input=({moveInput.x:F1},{moveInput.y:F1}) | " +
                           $"Speed={speed:F2} m/s | FwdSpeed={fwdSpeed:F2} | " +
-                          $"Pos={transform.position} | " +
-                          $"Vel={rb.linearVelocity} | " +
-                          $"isSleeping={rb.IsSleeping()} | isKinematic={rb.isKinematic}");
+                          $"Pos={transform.position} | rb={(rb != null ? "OK" : "NULL")}");
             }
         }
+    }
+
+    private void ApplyForces()
+    {
+        if (rb == null) InitRigidbody();
+        if (rb == null) return;
+
+        ApplyLocomotion(moveInput.y);
+        ApplySteering(moveInput.x);
     }
 
     private void ApplyLocomotion(float throttle)
@@ -86,11 +126,6 @@ public class HorseController : MonoBehaviour
             {
                 Vector3 force = transform.forward * pullForce * throttle;
                 rb.AddForce(force, ForceMode.Force);
-
-                if (debugLog && debugTimer < Time.fixedDeltaTime)
-                {
-                    Debug.Log($"[Horse] APPLYING FORCE: {force} (magnitude={force.magnitude:F0}N)");
-                }
             }
         }
         else if (throttle < 0f)
@@ -101,21 +136,14 @@ public class HorseController : MonoBehaviour
 
     private void ApplySteering(float steerInput)
     {
-        print(steerInput);
-        if (Mathf.Abs(steerInput) < 0.01f)
-        {
-            print("MathF"); return;
-        }
-
-
-        float forwardSpeed = Vector3.Dot(rb.linearVelocity, transform.forward);
-        float speedFactor = Mathf.Clamp01(Mathf.Abs(forwardSpeed) / 2f);
+        if (Mathf.Abs(steerInput) < 0.01f) return;
 
         rb.AddTorque(Vector3.up * steerTorque * steerInput, ForceMode.Force);
     }
 
     private void ApplyLateralDamping()
     {
+        if (rb == null) return;
         Vector3 lateralVelocity = Vector3.Project(rb.linearVelocity, transform.right);
         rb.AddForce(-lateralVelocity * lateralDampingForce, ForceMode.Force);
     }

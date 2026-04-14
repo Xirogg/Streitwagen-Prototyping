@@ -30,7 +30,15 @@ public class ChariotPhysics : MonoBehaviour
 
     private void Awake()
     {
-        rb = GetComponent<Rigidbody>();
+        InitRigidbody();
+    }
+
+    private void InitRigidbody()
+    {
+        if (rb == null)
+        {
+            rb = GetComponent<Rigidbody>();
+        }
     }
 
     /// <summary>
@@ -109,6 +117,9 @@ public class ChariotPhysics : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (rb == null) InitRigidbody();
+        if (rb == null) return;
+
         ApplyDownforce();
         ApplyAntiFlip();
         UpdateTelemetry();

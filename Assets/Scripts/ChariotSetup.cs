@@ -1,10 +1,10 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+
 /// <summary>
 /// Builds the entire chariot rig using Unity primitives.
-/// Attach this to an empty GameObject in the scene.
+/// Split-screen 2-player setup: Player 1 (left, WASD), Player 2 (right, Arrow Keys).
 /// Use the context menu "Build Rig" to generate in Editor, or press Play.
-/// Creates: Ground, Horse Pair, Chariot Body, Drawbar visuals, Camera setup, Debug HUD.
 /// </summary>
 [ExecuteAlways]
 public class ChariotSetup : MonoBehaviour
@@ -12,15 +12,24 @@ public class ChariotSetup : MonoBehaviour
     [Header("Build Settings")]
     [SerializeField] private bool buildRigAtRuntime = true;
 
+    [Header("Player Spacing")]
+    [SerializeField] private float playerSeparation = 12f;
+
     [Header("Colors")]
     [SerializeField] private Color groundColor = new Color(0.3f, 0.55f, 0.2f);
     [SerializeField] private Color horseColor = new Color(0.55f, 0.35f, 0.2f);
-    [SerializeField] private Color chariotColor = new Color(0.6f, 0.5f, 0.25f);
+    [SerializeField] private Color chariotColorP1 = new Color(0.6f, 0.5f, 0.25f);
+    [SerializeField] private Color chariotColorP2 = new Color(0.25f, 0.4f, 0.6f);
     [SerializeField] private Color wheelColor = new Color(0.35f, 0.25f, 0.15f);
     [SerializeField] private Color yokeColor = new Color(0.45f, 0.3f, 0.15f);
     [SerializeField] private Color obstacleColor = new Color(1f, 0.5f, 0f);
 
     private bool isBuilt = false;
+
+    // References for HUD
+    private Rigidbody[] horseRbRefs = new Rigidbody[2];
+    private Rigidbody[] chariotRbRefs = new Rigidbody[2];
+    private ChariotPhysics[] chariotPhysicsRefs = new ChariotPhysics[2];
 
     private void Awake()
     {
@@ -41,29 +50,42 @@ public class ChariotSetup : MonoBehaviour
     [ContextMenu("Clear Rig")]
     public void ClearRig()
     {
-        // Destroy all children of this object and known root objects
-        string[] rootNames = { "Ground", "HorsePair", "ChariotBody", "TestObstacles" };
+        string[] rootNames = {
+            "Ground", "TestObstacles",
+            "HorsePair_P1", "ChariotBody_P1",
+            "HorsePair_P2", "ChariotBody_P2",
+            // Legacy single-player names
+            "HorsePair", "ChariotBody"
+        };
         foreach (string name in rootNames)
         {
             GameObject obj = GameObject.Find(name);
             if (obj != null) SafeDestroy(obj);
         }
 
-        // Destroy children
         for (int i = transform.childCount - 1; i >= 0; i--)
         {
             SafeDestroy(transform.GetChild(i).gameObject);
         }
 
-        // Remove ChariotCamera from main camera if present
+        // Clean up cameras
         Camera mainCam = Camera.main;
         if (mainCam != null)
         {
             ChariotCamera camScript = mainCam.GetComponent<ChariotCamera>();
             if (camScript != null) SafeDestroy(camScript);
+            // Reset viewport to full
+            mainCam.rect = new Rect(0f, 0f, 1f, 1f);
         }
 
+        // Remove player 2 camera if it exists
+        GameObject p2CamObj = GameObject.Find("Camera_P2");
+        if (p2CamObj != null) SafeDestroy(p2CamObj);
+
         isBuilt = false;
+        horseRbRefs = new Rigidbody[2];
+        chariotRbRefs = new Rigidbody[2];
+        chariotPhysicsRefs = new ChariotPhysics[2];
     }
 
     private void SafeDestroy(Object obj)
@@ -82,25 +104,36 @@ public class ChariotSetup : MonoBehaviour
         PhysicsMaterial chariotMat = CreatePhysicsMaterial("ChariotSlide", 0.08f, 0.12f, PhysicsMaterialCombine.Minimum);
 
         // --- Ground ---
-        GameObject ground = CreateGround(groundMat);
+        CreateGround(groundMat);
 
-        // --- Horse Pair ---
-        GameObject horsePair = CreateHorsePair(hoovesMat);
+        // --- Player 1 (left side, WASD) ---
+        float p1X = -playerSeparation / 2f;
+        GameObject horsePair1 = CreateHorsePair(hoovesMat, 0, p1X);
+        GameObject chariot1 = CreateChariotBody(chariotMat, horsePair1.GetComponent<Rigidbody>(), 0, p1X);
+        CreateDrawbarVisual(chariot1.transform, horsePair1.transform);
 
-        // --- Chariot Body ---
-        GameObject chariotBody = CreateChariotBody(chariotMat, horsePair.GetComponent<Rigidbody>());
+        // --- Player 2 (right side, Arrow Keys) ---
+        float p2X = playerSeparation / 2f;
+        GameObject horsePair2 = CreateHorsePair(hoovesMat, 1, p2X);
+        GameObject chariot2 = CreateChariotBody(chariotMat, horsePair2.GetComponent<Rigidbody>(), 1, p2X);
+        CreateDrawbarVisual(chariot2.transform, horsePair2.transform);
 
-        // --- Drawbar visual (parented to chariot, purely decorative) ---
-        CreateDrawbarVisual(chariotBody.transform, horsePair.transform);
+        // --- Split-Screen Cameras ---
+        SetupSplitScreenCameras(chariot1.transform, chariot2.transform);
 
-        // --- Camera ---
-        SetupCamera(chariotBody.transform);
-
-        // --- Test obstacles ---
+        // --- Test obstacles (shared) ---
         CreateTestObstacles();
 
+        // Cache references for HUD
+        horseRbRefs[0] = horsePair1.GetComponent<Rigidbody>();
+        horseRbRefs[1] = horsePair2.GetComponent<Rigidbody>();
+        chariotRbRefs[0] = chariot1.GetComponent<Rigidbody>();
+        chariotRbRefs[1] = chariot2.GetComponent<Rigidbody>();
+        chariotPhysicsRefs[0] = chariot1.GetComponent<ChariotPhysics>();
+        chariotPhysicsRefs[1] = chariot2.GetComponent<ChariotPhysics>();
+
         isBuilt = true;
-        Debug.Log("[ChariotSetup] Rig built successfully. Use WASD to drive!");
+        Debug.Log("[ChariotSetup] Split-screen rig built! P1=WASD, P2=Arrow Keys");
     }
 
     // ==================== GROUND ====================
@@ -111,25 +144,18 @@ public class ChariotSetup : MonoBehaviour
         ground.name = "Ground";
         ground.transform.position = new Vector3(0f, -0.5f, 0f);
         ground.transform.localScale = new Vector3(200f, 1f, 200f);
-
-        // Physics material
         ground.GetComponent<Collider>().material = mat;
-
-        // Visual
         SetColor(ground, groundColor);
-
         return ground;
     }
 
     // ==================== HORSE PAIR ====================
 
-    private GameObject CreateHorsePair(PhysicsMaterial mat)
+    private GameObject CreateHorsePair(PhysicsMaterial mat, int playerIndex, float xOffset)
     {
-        // Main physics body (invisible - the capsule collider is the physics shape)
-        GameObject horsePair = new GameObject("HorsePair");
-        horsePair.transform.position = new Vector3(0f, 1f, 6f);
+        GameObject horsePair = new GameObject(playerIndex == 0 ? "HorsePair_P1" : "HorsePair_P2");
+        horsePair.transform.position = new Vector3(xOffset, 1f, 6f);
 
-        // Rigidbody
         Rigidbody rb = horsePair.AddComponent<Rigidbody>();
         rb.mass = 400f;
         rb.linearDamping = 2f;
@@ -138,19 +164,17 @@ public class ChariotSetup : MonoBehaviour
         rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
-        // Collider (capsule oriented along Z axis for the horse pair)
         CapsuleCollider col = horsePair.AddComponent<CapsuleCollider>();
-        col.direction = 2; // Z-axis
+        col.direction = 2;
         col.radius = 0.7f;
         col.height = 3.0f;
-        col.center = new Vector3(0f, 0f, 0f);
+        col.center = Vector3.zero;
         col.material = mat;
 
-        // Horse Controller script
-        horsePair.AddComponent<HorseController>();
+        HorseController controller = horsePair.AddComponent<HorseController>();
+        controller.SetPlayerIndex(playerIndex);
 
         // --- Visual children ---
-        // Left horse
         GameObject leftHorse = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         leftHorse.name = "LeftHorseVisual";
         leftHorse.transform.SetParent(horsePair.transform, false);
@@ -159,7 +183,6 @@ public class ChariotSetup : MonoBehaviour
         RemoveCollider(leftHorse);
         SetColor(leftHorse, horseColor);
 
-        // Right horse
         GameObject rightHorse = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         rightHorse.name = "RightHorseVisual";
         rightHorse.transform.SetParent(horsePair.transform, false);
@@ -168,11 +191,9 @@ public class ChariotSetup : MonoBehaviour
         RemoveCollider(rightHorse);
         SetColor(rightHorse, horseColor);
 
-        // Horse heads (small spheres at front)
         CreateHorseHead(leftHorse.transform, "LeftHead");
         CreateHorseHead(rightHorse.transform, "RightHead");
 
-        // Yoke bar connecting the two horses
         GameObject yoke = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         yoke.name = "YokeBar";
         yoke.transform.SetParent(horsePair.transform, false);
@@ -193,17 +214,16 @@ public class ChariotSetup : MonoBehaviour
         head.transform.localPosition = new Vector3(0f, 0.5f, 0.7f);
         head.transform.localScale = new Vector3(0.6f, 0.5f, 0.7f);
         RemoveCollider(head);
-        SetColor(head, horseColor * 0.85f); // Slightly darker
+        SetColor(head, horseColor * 0.85f);
     }
 
     // ==================== CHARIOT BODY ====================
 
-    private GameObject CreateChariotBody(PhysicsMaterial mat, Rigidbody horseRb)
+    private GameObject CreateChariotBody(PhysicsMaterial mat, Rigidbody horseRb, int playerIndex, float xOffset)
     {
-        GameObject chariot = new GameObject("ChariotBody");
-        chariot.transform.position = new Vector3(0f, 0.75f, 0f);
+        GameObject chariot = new GameObject(playerIndex == 0 ? "ChariotBody_P1" : "ChariotBody_P2");
+        chariot.transform.position = new Vector3(xOffset, 0.75f, 0f);
 
-        // Rigidbody
         Rigidbody rb = chariot.AddComponent<Rigidbody>();
         rb.mass = 200f;
         rb.linearDamping = 0.3f;
@@ -211,34 +231,28 @@ public class ChariotSetup : MonoBehaviour
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
 
-        // Box collider for the chariot body
         BoxCollider col = chariot.AddComponent<BoxCollider>();
         col.size = new Vector3(2.0f, 0.3f, 2.5f);
         col.center = new Vector3(0f, -0.2f, 0f);
         col.material = mat;
 
-        // Chariot Physics script + joint setup
         ChariotPhysics physics = chariot.AddComponent<ChariotPhysics>();
         physics.SetupJoint(horseRb);
 
-        // --- Visual children ---
-        // Platform (floor of the chariot)
+        Color chariotColor = playerIndex == 0 ? chariotColorP1 : chariotColorP2;
+
+        // Platform
         GameObject platform = GameObject.CreatePrimitive(PrimitiveType.Cube);
         platform.name = "Platform";
         platform.transform.SetParent(chariot.transform, false);
-        platform.transform.localPosition = new Vector3(0f, 0f, 0f);
+        platform.transform.localPosition = Vector3.zero;
         platform.transform.localScale = new Vector3(1.8f, 0.15f, 2.2f);
         RemoveCollider(platform);
         SetColor(platform, chariotColor);
 
-        // Left wheel
         CreateWheel(chariot.transform, "LeftWheel", new Vector3(-1.1f, -0.15f, -0.3f));
-
-        // Right wheel
         CreateWheel(chariot.transform, "RightWheel", new Vector3(1.1f, -0.15f, -0.3f));
-
-        // Front rail (U-shaped guard rail)
-        CreateFrontRail(chariot.transform);
+        CreateFrontRail(chariot.transform, chariotColor);
 
         return chariot;
     }
@@ -254,7 +268,6 @@ public class ChariotSetup : MonoBehaviour
         RemoveCollider(wheel);
         SetColor(wheel, wheelColor);
 
-        // Wheel spokes (cross pattern)
         GameObject spoke1 = GameObject.CreatePrimitive(PrimitiveType.Cube);
         spoke1.name = "Spoke1";
         spoke1.transform.SetParent(wheel.transform, false);
@@ -271,9 +284,8 @@ public class ChariotSetup : MonoBehaviour
         SetColor(spoke2, wheelColor * 0.8f);
     }
 
-    private void CreateFrontRail(Transform parent)
+    private void CreateFrontRail(Transform parent, Color chariotColor)
     {
-        // Front bar
         GameObject front = GameObject.CreatePrimitive(PrimitiveType.Cube);
         front.name = "FrontRail";
         front.transform.SetParent(parent, false);
@@ -282,7 +294,6 @@ public class ChariotSetup : MonoBehaviour
         RemoveCollider(front);
         SetColor(front, chariotColor * 0.9f);
 
-        // Left side rail
         GameObject left = GameObject.CreatePrimitive(PrimitiveType.Cube);
         left.name = "LeftRail";
         left.transform.SetParent(parent, false);
@@ -291,7 +302,6 @@ public class ChariotSetup : MonoBehaviour
         RemoveCollider(left);
         SetColor(left, chariotColor * 0.9f);
 
-        // Right side rail
         GameObject right = GameObject.CreatePrimitive(PrimitiveType.Cube);
         right.name = "RightRail";
         right.transform.SetParent(parent, false);
@@ -305,7 +315,6 @@ public class ChariotSetup : MonoBehaviour
 
     private void CreateDrawbarVisual(Transform chariotTransform, Transform horseTransform)
     {
-        // Main drawbar (Deichsel) - connects chariot front to horse rear
         GameObject drawbar = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         drawbar.name = "Drawbar";
         drawbar.transform.SetParent(chariotTransform, false);
@@ -315,7 +324,6 @@ public class ChariotSetup : MonoBehaviour
         RemoveCollider(drawbar);
         SetColor(drawbar, yokeColor);
 
-        // Left trace (connects to left horse)
         GameObject leftTrace = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         leftTrace.name = "LeftTrace";
         leftTrace.transform.SetParent(chariotTransform, false);
@@ -325,7 +333,6 @@ public class ChariotSetup : MonoBehaviour
         RemoveCollider(leftTrace);
         SetColor(leftTrace, yokeColor * 0.8f);
 
-        // Right trace
         GameObject rightTrace = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         rightTrace.name = "RightTrace";
         rightTrace.transform.SetParent(chariotTransform, false);
@@ -336,10 +343,11 @@ public class ChariotSetup : MonoBehaviour
         SetColor(rightTrace, yokeColor * 0.8f);
     }
 
-    // ==================== CAMERA ====================
+    // ==================== SPLIT-SCREEN CAMERAS ====================
 
-    private void SetupCamera(Transform chariotTransform)
+    private void SetupSplitScreenCameras(Transform chariot1, Transform chariot2)
     {
+        // --- Player 1 Camera (left half) ---
         Camera mainCam = Camera.main;
         if (mainCam == null)
         {
@@ -347,12 +355,40 @@ public class ChariotSetup : MonoBehaviour
             return;
         }
 
-        ChariotCamera camScript = mainCam.gameObject.AddComponent<ChariotCamera>();
-        camScript.SetTarget(chariotTransform);
+        // Use main camera for Player 1
+        mainCam.rect = new Rect(0f, 0f, 0.5f, 1f); // Left half
+        ChariotCamera cam1Script = mainCam.gameObject.AddComponent<ChariotCamera>();
+        cam1Script.SetTarget(chariot1);
+        mainCam.transform.position = chariot1.position + new Vector3(0f, 5f, -8f);
+        mainCam.transform.LookAt(chariot1);
 
-        // Position camera behind chariot initially
-        mainCam.transform.position = chariotTransform.position + new Vector3(0f, 5f, -8f);
-        mainCam.transform.LookAt(chariotTransform);
+        // --- Player 2 Camera (right half) ---
+        GameObject cam2Obj = new GameObject("Camera_P2");
+        Camera cam2 = cam2Obj.AddComponent<Camera>();
+        cam2.rect = new Rect(0.5f, 0f, 0.5f, 1f); // Right half
+        cam2.depth = 0;
+        cam2.fieldOfView = mainCam.fieldOfView;
+        cam2.nearClipPlane = mainCam.nearClipPlane;
+        cam2.farClipPlane = mainCam.farClipPlane;
+        cam2.clearFlags = mainCam.clearFlags;
+        cam2.backgroundColor = mainCam.backgroundColor;
+
+        // Copy URP renderer data if available
+        var mainCamData = mainCam.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
+        if (mainCamData != null)
+        {
+            var cam2Data = cam2Obj.AddComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
+            cam2Data.renderType = mainCamData.renderType;
+        }
+
+        // Only one AudioListener allowed in scene
+        AudioListener listener2 = cam2Obj.GetComponent<AudioListener>();
+        if (listener2 != null) SafeDestroy(listener2);
+
+        ChariotCamera cam2Script = cam2Obj.AddComponent<ChariotCamera>();
+        cam2Script.SetTarget(chariot2);
+        cam2.transform.position = chariot2.position + new Vector3(0f, 5f, -8f);
+        cam2.transform.LookAt(chariot2);
     }
 
     // ==================== TEST OBSTACLES ====================
@@ -361,7 +397,6 @@ public class ChariotSetup : MonoBehaviour
     {
         GameObject obstacles = new GameObject("TestObstacles");
 
-        // Create cones/pillars in a slalom pattern
         float[] xPositions = { -3f, 3f, -3f, 3f, -3f, 3f };
         float startZ = 20f;
         float spacing = 15f;
@@ -375,12 +410,10 @@ public class ChariotSetup : MonoBehaviour
             cone.transform.localScale = new Vector3(0.5f, 1.5f, 0.5f);
             SetColor(cone, obstacleColor);
 
-            // Add rigidbody so they can be knocked over
             Rigidbody rb = cone.AddComponent<Rigidbody>();
             rb.mass = 5f;
         }
 
-        // Create a circular arena boundary (ring of pillars)
         int pillarCount = 24;
         float arenaRadius = 40f;
         for (int i = 0; i < pillarCount; i++)
@@ -416,7 +449,6 @@ public class ChariotSetup : MonoBehaviour
         Renderer renderer = obj.GetComponent<Renderer>();
         if (renderer != null)
         {
-            // Create a new material instance with URP Lit shader
             Material material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
             material.color = color;
             renderer.material = material;
@@ -434,109 +466,94 @@ public class ChariotSetup : MonoBehaviour
 
     // ==================== DEBUG HUD ====================
 
-    private ChariotPhysics chariotPhysicsRef;
-    private Rigidbody horseRbRef;
-    private Rigidbody chariotRbRef;
-
     private void Start()
     {
-        // Cache references for the HUD
-        GameObject horsePair = GameObject.Find("HorsePair");
-        GameObject chariotBody = GameObject.Find("ChariotBody");
+        if (!Application.isPlaying) return;
 
-        if (horsePair != null) horseRbRef = horsePair.GetComponent<Rigidbody>();
-        if (chariotBody != null)
+        // Cache references if not already set by BuildRig
+        if (horseRbRefs[0] == null)
         {
-            chariotRbRef = chariotBody.GetComponent<Rigidbody>();
-            chariotPhysicsRef = chariotBody.GetComponent<ChariotPhysics>();
+            GameObject hp1 = GameObject.Find("HorsePair_P1");
+            GameObject hp2 = GameObject.Find("HorsePair_P2");
+            GameObject cb1 = GameObject.Find("ChariotBody_P1");
+            GameObject cb2 = GameObject.Find("ChariotBody_P2");
+
+            if (hp1 != null) horseRbRefs[0] = hp1.GetComponent<Rigidbody>();
+            if (hp2 != null) horseRbRefs[1] = hp2.GetComponent<Rigidbody>();
+            if (cb1 != null)
+            {
+                chariotRbRefs[0] = cb1.GetComponent<Rigidbody>();
+                chariotPhysicsRefs[0] = cb1.GetComponent<ChariotPhysics>();
+            }
+            if (cb2 != null)
+            {
+                chariotRbRefs[1] = cb2.GetComponent<Rigidbody>();
+                chariotPhysicsRefs[1] = cb2.GetComponent<ChariotPhysics>();
+            }
         }
     }
 
     private void OnGUI()
     {
+        if (!Application.isPlaying) return;
+
         GUIStyle style = new GUIStyle(GUI.skin.label);
-        style.fontSize = 14;
+        style.fontSize = 12;
         style.normal.textColor = Color.white;
         style.fontStyle = FontStyle.Bold;
 
         GUIStyle headerStyle = new GUIStyle(style);
-        headerStyle.fontSize = 16;
+        headerStyle.fontSize = 14;
         headerStyle.normal.textColor = Color.yellow;
 
-        float x = 15;
-        float y = 15;
-        float lineHeight = 20;
-        float boxWidth = 350;
-        float boxHeight = 320;
+        float screenHalf = Screen.width / 2f;
 
-        GUI.Box(new Rect(10, 10, boxWidth, boxHeight), "");
-
-        GUI.Label(new Rect(x, y, boxWidth, 25), "=== STREITWAGEN DEBUG ===", headerStyle);
-        y += lineHeight + 5;
-
-        // Input
-        
-        Keyboard kb = Keyboard.current;
-        if (kb != null)
+        for (int p = 0; p < 2; p++)
         {
-            string keys = "";
-            if (kb.wKey.isPressed) keys += "W ";
-            if (kb.aKey.isPressed) keys += "A ";
-            if (kb.sKey.isPressed) keys += "S ";
-            if (kb.dKey.isPressed) keys += "D ";
-            if (keys == "") keys = "(none)";
-            GUI.Label(new Rect(x, y, boxWidth, 25), $"Input: {keys}", style);
-            y += lineHeight;
-        }
+            float panelX = p == 0 ? 15f : screenHalf + 15f;
+            float y = 15f;
+            float lineHeight = 18f;
+            float boxWidth = Mathf.Min(280f, screenHalf - 30f);
+            float boxHeight = 200f;
 
-        // Horse data
-        GUI.Label(new Rect(x, y, boxWidth, 25), "--- Pferde ---", headerStyle);
-        y += lineHeight;
-        if (horseRbRef != null)
-        {
-            GUI.Label(new Rect(x, y, boxWidth, 25), $"Pos: {horseRbRef.position:F2}", style);
-            y += lineHeight;
-            GUI.Label(new Rect(x, y, boxWidth, 25), $"Vel: {horseRbRef.linearVelocity:F2}", style);
-            y += lineHeight;
-            float hSpeed = horseRbRef.linearVelocity.magnitude;
-            GUI.Label(new Rect(x, y, boxWidth, 25), $"Speed: {hSpeed:F2} m/s", style);
-            y += lineHeight;
-            GUI.Label(new Rect(x, y, boxWidth, 25), $"Sleeping: {horseRbRef.IsSleeping()} | Kinematic: {horseRbRef.isKinematic}", style);
-            y += lineHeight;
-            GUI.Label(new Rect(x, y, boxWidth, 25), $"Mass: {horseRbRef.mass} | Drag: {horseRbRef.linearDamping}", style);
-            y += lineHeight;
-        }
-        else
-        {
-            GUI.Label(new Rect(x, y, boxWidth, 25), "Horse Rigidbody: NOT FOUND!", style);
-            y += lineHeight;
-        }
+            string playerLabel = p == 0 ? "P1 (WASD)" : "P2 (Pfeiltasten)";
+            Color playerColor = p == 0 ? chariotColorP1 : chariotColorP2;
 
-        // Chariot data
-        GUI.Label(new Rect(x, y, boxWidth, 25), "--- Wagen ---", headerStyle);
-        y += lineHeight;
-        if (chariotRbRef != null)
-        {
-            GUI.Label(new Rect(x, y, boxWidth, 25), $"Pos: {chariotRbRef.position:F2}", style);
-            y += lineHeight;
-            GUI.Label(new Rect(x, y, boxWidth, 25), $"Vel: {chariotRbRef.linearVelocity:F2}", style);
-            y += lineHeight;
-            float cSpeed = chariotRbRef.linearVelocity.magnitude;
-            GUI.Label(new Rect(x, y, boxWidth, 25), $"Speed: {cSpeed:F2} m/s", style);
-            y += lineHeight;
-            GUI.Label(new Rect(x, y, boxWidth, 25), $"Sleeping: {chariotRbRef.IsSleeping()} | Kinematic: {chariotRbRef.isKinematic}", style);
-            y += lineHeight;
-        }
+            GUI.Box(new Rect(panelX - 5f, 10f, boxWidth, boxHeight), "");
 
-        if (chariotPhysicsRef != null)
-        {
-            GUI.Label(new Rect(x, y, boxWidth, 25), $"Drift Winkel: {chariotPhysicsRef.driftAngle:F1} deg", style);
-            y += lineHeight;
-            string driftStatus = chariotPhysicsRef.driftAngle > 15f ? "DRIFTING!" :
-                                 chariotPhysicsRef.driftAngle > 5f ? "leichter Drift" : "stabil";
-            style.normal.textColor = chariotPhysicsRef.driftAngle > 15f ? Color.red :
-                                     chariotPhysicsRef.driftAngle > 5f ? Color.yellow : Color.green;
-            GUI.Label(new Rect(x, y, boxWidth, 25), $"Status: {driftStatus}", style);
+            headerStyle.normal.textColor = playerColor;
+            GUI.Label(new Rect(panelX, y, boxWidth, 25), $"=== {playerLabel} ===", headerStyle);
+            y += lineHeight + 5;
+
+            style.normal.textColor = Color.white;
+            if (horseRbRefs[p] != null)
+            {
+                float hSpeed = horseRbRefs[p].linearVelocity.magnitude;
+                GUI.Label(new Rect(panelX, y, boxWidth, 25), $"Pferde Speed: {hSpeed:F2} m/s", style);
+                y += lineHeight;
+            }
+
+            if (chariotRbRefs[p] != null)
+            {
+                float cSpeed = chariotRbRefs[p].linearVelocity.magnitude;
+                GUI.Label(new Rect(panelX, y, boxWidth, 25), $"Wagen Speed: {cSpeed:F2} m/s", style);
+                y += lineHeight;
+                GUI.Label(new Rect(panelX, y, boxWidth, 25), $"Pos: {chariotRbRefs[p].position:F1}", style);
+                y += lineHeight;
+            }
+
+            if (chariotPhysicsRefs[p] != null)
+            {
+                float drift = chariotPhysicsRefs[p].driftAngle;
+                GUI.Label(new Rect(panelX, y, boxWidth, 25), $"Drift: {drift:F1} deg", style);
+                y += lineHeight;
+
+                string driftStatus = drift > 15f ? "DRIFTING!" :
+                                     drift > 5f ? "leichter Drift" : "stabil";
+                style.normal.textColor = drift > 15f ? Color.red :
+                                         drift > 5f ? Color.yellow : Color.green;
+                GUI.Label(new Rect(panelX, y, boxWidth, 25), $"Status: {driftStatus}", style);
+            }
         }
     }
 }
