@@ -30,6 +30,12 @@ public class HorseController : MonoBehaviour
 
     private Rigidbody rb;
     private Vector2 moveInput;
+    private float speedMultiplier = 1f;
+
+    public void SetSpeedMultiplier(float multiplier)
+    {
+        speedMultiplier = multiplier;
+    }
 
     public void SetPlayerIndex(int index)
     {
@@ -122,7 +128,7 @@ public class HorseController : MonoBehaviour
 
         if (throttle > 0f)
         {
-            if (currentForwardSpeed < maxSpeed)
+            if (currentForwardSpeed < maxSpeed * speedMultiplier)
             {
                 Vector3 force = transform.forward * pullForce * throttle;
                 rb.AddForce(force, ForceMode.Force);
