@@ -134,7 +134,7 @@ GameObject:
   - component: {fileID: 76770092}
   m_Layer: 0
   m_Name: ChariotBody_P1
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -798,7 +798,7 @@ PrefabInstance:
     - target: {fileID: -527738672344719795, guid: d8d826dc719819d409b9c554e5f59db9, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 9678b02e554a2ed449e7bfc0a31207f2, type: 2}
+      objectReference: {fileID: 2100000, guid: dd14a8ce673c13e4fbf5b2a772711db4, type: 2}
     - target: {fileID: -45510575295339216, guid: d8d826dc719819d409b9c554e5f59db9, type: 3}
       propertyPath: lengthInSec
       value: 2
@@ -1075,6 +1075,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 200969227}
+  - component: {fileID: 200969228}
   m_Layer: 0
   m_Name: Walls
   m_TagString: Untagged
@@ -1102,6 +1103,21 @@ Transform:
   - {fileID: 1138977709}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &200969228
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200969226}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ccdbeb0dbe51c9348bcfcc15b3ca0db4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PowerManager
+  shrinkScale: 0.5
+  speedReduction: 0.5
+  effectDuration: 5
 --- !u!1 &204221321
 GameObject:
   m_ObjectHideFlags: 0
@@ -1116,7 +1132,7 @@ GameObject:
   - component: {fileID: 204221323}
   m_Layer: 0
   m_Name: HorsePair_P2
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -7151,7 +7167,7 @@ GameObject:
   - component: {fileID: 1459831486}
   m_Layer: 0
   m_Name: ChariotBody_P2
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -9787,7 +9803,7 @@ GameObject:
   - component: {fileID: 2136642610}
   m_Layer: 0
   m_Name: HorsePair_P1
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
