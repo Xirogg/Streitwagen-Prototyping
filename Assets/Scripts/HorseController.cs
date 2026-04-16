@@ -63,27 +63,28 @@ public class HorseController : MonoBehaviour
     {
         if (!Application.isPlaying) return;
 
-        Keyboard kb = Keyboard.current;
-        if (kb == null) return;
-
         float horizontal = 0f;
         float vertical = 0f;
+
+        // Try new Input System first, fall back to legacy Input.GetKey
+        // (some laptop keyboards don't register all keys via the new system)
+        Keyboard kb = Keyboard.current;
 
         if (playerIndex == 0)
         {
             // Player 1: WASD
-            if (kb.wKey.isPressed) vertical += 1f;
-            if (kb.sKey.isPressed) vertical -= 1f;
-            if (kb.aKey.isPressed) horizontal -= 1f;
-            if (kb.dKey.isPressed) horizontal += 1f;
+            if ((kb != null && kb.wKey.isPressed) || Input.GetKey(KeyCode.W)) vertical += 1f;
+            if ((kb != null && kb.sKey.isPressed) || Input.GetKey(KeyCode.S)) vertical -= 1f;
+            if ((kb != null && kb.aKey.isPressed) || Input.GetKey(KeyCode.A)) horizontal -= 1f;
+            if ((kb != null && kb.dKey.isPressed) || Input.GetKey(KeyCode.D)) horizontal += 1f;
         }
         else
         {
             // Player 2: Arrow Keys
-            if (kb.upArrowKey.isPressed) vertical += 1f;
-            if (kb.downArrowKey.isPressed) vertical -= 1f;
-            if (kb.leftArrowKey.isPressed) horizontal -= 1f;
-            if (kb.rightArrowKey.isPressed) horizontal += 1f;
+            if ((kb != null && kb.upArrowKey.isPressed) || Input.GetKey(KeyCode.UpArrow)) vertical += 1f;
+            if ((kb != null && kb.downArrowKey.isPressed) || Input.GetKey(KeyCode.DownArrow)) vertical -= 1f;
+            if ((kb != null && kb.leftArrowKey.isPressed) || Input.GetKey(KeyCode.LeftArrow)) horizontal -= 1f;
+            if ((kb != null && kb.rightArrowKey.isPressed) || Input.GetKey(KeyCode.RightArrow)) horizontal += 1f;
         }
 
         moveInput = new Vector2(horizontal, vertical);

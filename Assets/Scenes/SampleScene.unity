@@ -1177,8 +1177,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HorseController
   playerIndex: 1
-  pullForce: 3000
-  maxSpeed: 12
+  pullForce: 5555
+  maxSpeed: 15
   brakeForce: 2000
   steerTorque: 2000
   maxAngularVelocity: 2
@@ -1216,7 +1216,7 @@ Transform:
   m_GameObject: {fileID: 204221321}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0.6917449, z: -0, w: 0.722142}
-  m_LocalPosition: {x: -3.14, y: 1, z: 16.79}
+  m_LocalPosition: {x: -6.22, y: 1, z: 16.92}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -7181,7 +7181,7 @@ Transform:
   m_GameObject: {fileID: 1459831484}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0.6917449, z: -0, w: 0.722142}
-  m_LocalPosition: {x: 6, y: 0.75, z: 16.78}
+  m_LocalPosition: {x: 0.18000007, y: 0.75, z: 17.03}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -9848,8 +9848,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HorseController
   playerIndex: 0
-  pullForce: 3000
-  maxSpeed: 12
+  pullForce: 5555
+  maxSpeed: 15
   brakeForce: 2000
   steerTorque: 5000
   maxAngularVelocity: 2
