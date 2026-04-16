@@ -1180,7 +1180,7 @@ MonoBehaviour:
   pullForce: 5555
   maxSpeed: 15
   brakeForce: 2000
-  steerTorque: 2000
+  steerTorque: 5000
   maxAngularVelocity: 2
   lateralDampingForce: 500
   debugLog: 0
