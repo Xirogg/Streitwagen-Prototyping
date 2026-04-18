@@ -32,6 +32,8 @@ public class HorseController : MonoBehaviour
     private Vector2 moveInput;
     private float speedMultiplier = 1f;
 
+    public static bool MovementEnabled { get; set; } = true;
+
     public void SetSpeedMultiplier(float multiplier)
     {
         speedMultiplier = multiplier;
@@ -65,6 +67,12 @@ public class HorseController : MonoBehaviour
 
         float horizontal = 0f;
         float vertical = 0f;
+
+        if (!MovementEnabled)
+        {
+            moveInput = Vector2.zero;
+            return;
+        }
 
         // Try new Input System first, fall back to legacy Input.GetKey
         // (some laptop keyboards don't register all keys via the new system)
