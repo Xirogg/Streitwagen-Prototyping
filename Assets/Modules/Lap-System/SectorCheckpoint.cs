@@ -26,6 +26,7 @@ namespace LapSystem
 
         private void OnTriggerEnter(Collider other)
         {
+            //Excludes everything but Players not passed thc Checkpoint this Lap 
             if (passed) return;
             if (!other.CompareTag("Player")) return;
             if (LapManager.Instance == null) return;
