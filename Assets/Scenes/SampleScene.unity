@@ -1626,10 +1626,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HorseController
   playerIndex: 1
-  pullForce: 5555
+  pullForce: 3000
   maxSpeed: 15
   brakeForce: 2000
-  steerTorque: 5000
+  steerTorque: 1500
   maxAngularVelocity: 2
   lateralDampingForce: 500
   debugLog: 0
@@ -15526,10 +15526,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HorseController
   playerIndex: 0
-  pullForce: 5555
-  maxSpeed: 150
+  pullForce: 3000
+  maxSpeed: 15
   brakeForce: 2000
-  steerTorque: 3000
+  steerTorque: 1500
   maxAngularVelocity: 2
   lateralDampingForce: 500
   debugLog: 0
