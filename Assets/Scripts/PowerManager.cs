@@ -1,96 +1,57 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
-using System.Collections;
 using System.Collections.Generic;
 
 /// <summary>
-/// Manages god powers (Goetterkraefte).
-/// Press B to trigger Lightning: all "Player" tagged objects shrink to 50%
-/// and their max speed is halved for a duration, then everything restores.
+/// Central hub for all god powers. Auto-discovers GodPower components in children
+/// and spawns a cooldown UI indicator for each one under a given UI container.
 /// </summary>
 public class PowerManager : MonoBehaviour
 {
-    [Header("Lightning Settings")]
-    [SerializeField] private float shrinkScale = 0.5f;
-    [SerializeField] private float speedReduction = 0.5f;
-    [SerializeField] private float effectDuration = 5f;
+    [Header("UI")]
+    [Tooltip("Parent transform under the Canvas where cooldown indicators are spawned. Each power provides its own prefab.")]
+    [SerializeField] private RectTransform cooldownContainer;
 
-    private bool lightningActive = false;
+    [Header("Discovery")]
+    [Tooltip("If true, discovers GodPower components in children at Awake. Otherwise uses the list below.")]
+    [SerializeField] private bool autoDiscover = true;
+    [SerializeField] private List<GodPower> powers = new List<GodPower>();
 
-    private struct AffectedPlayer
+    public IReadOnlyList<GodPower> Powers => powers;
+
+    private void Awake()
     {
-        public GameObject gameObject;
-        public Vector3 originalScale;
-        public HorseController horseController;
-    }
-
-    private List<AffectedPlayer> affectedPlayers = new List<AffectedPlayer>();
-
-    private void Update()
-    {
-        Keyboard kb = Keyboard.current;
-        if (kb == null) return;
-
-        if (kb.bKey.wasPressedThisFrame && !lightningActive)
+        if (autoDiscover)
         {
-            StartCoroutine(LightningStrike());
+            powers.Clear();
+            powers.AddRange(GetComponentsInChildren<GodPower>(true));
         }
     }
 
-    private IEnumerator LightningStrike()
+    private void Start()
     {
-        lightningActive = true;
-        affectedPlayers.Clear();
+        SpawnIndicators();
+    }
 
-        GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
-
-        // Shrink all players and reduce speed
-        foreach (GameObject player in players)
+    private void SpawnIndicators()
+    {
+        if (cooldownContainer == null)
         {
-            AffectedPlayer ap = new AffectedPlayer
-            {
-                gameObject = player,
-                originalScale = player.transform.localScale,
-                horseController = player.GetComponentInChildren<HorseController>()
-            };
-
-            // If no HorseController on the object itself, check parent/siblings
-            if (ap.horseController == null)
-            {
-                ap.horseController = player.GetComponentInParent<HorseController>();
-            }
-
-            player.transform.localScale = ap.originalScale * shrinkScale;
-
-            if (ap.horseController != null)
-            {
-                ap.horseController.SetSpeedMultiplier(speedReduction);
-            }
-
-            affectedPlayers.Add(ap);
+            Debug.LogWarning("[PowerManager] No cooldown container assigned; skipping UI spawn.");
+            return;
         }
 
-        Debug.Log($"[PowerManager] Lightning! {affectedPlayers.Count} players affected for {effectDuration}s");
-
-        yield return new WaitForSeconds(effectDuration);
-
-        // Restore all players
-        foreach (AffectedPlayer ap in affectedPlayers)
+        foreach (GodPower power in powers)
         {
-            if (ap.gameObject != null)
+            if (power == null) continue;
+            GUI_CooldownIndicator prefab = power.IndicatorPrefab;
+            if (prefab == null)
             {
-                ap.gameObject.transform.localScale = ap.originalScale;
+                Debug.LogWarning($"[PowerManager] Power '{power.DisplayName}' has no indicator prefab assigned; skipping.");
+                continue;
             }
-
-            if (ap.horseController != null)
-            {
-                ap.horseController.SetSpeedMultiplier(1f);
-            }
+            GUI_CooldownIndicator indicator = Instantiate(prefab, cooldownContainer);
+            indicator.Bind(power);
+            Debug.Log($"[PowerManager] Spawned indicator for '{power.DisplayName}' under {cooldownContainer.name}");
         }
-
-        affectedPlayers.Clear();
-        lightningActive = false;
-
-        Debug.Log("[PowerManager] Lightning effect ended, players restored.");
     }
 }

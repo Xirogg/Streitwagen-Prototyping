@@ -20,6 +20,7 @@ public class HorseController : MonoBehaviour
     [Header("Steering")]
     [SerializeField] private float steerTorque = 800f;
     [SerializeField] private float maxAngularVelocity = 2f;
+    [SerializeField] private float sharpSteerMultiplier = 1.4f;
 
     [Header("Stability")]
     [SerializeField] private float lateralDampingForce = 500f;
@@ -80,19 +81,23 @@ public class HorseController : MonoBehaviour
 
         if (playerIndex == 0)
         {
-            // Player 1: WASD
+            // Player 1: WASD (Q/E for sharper turns)
             if ((kb != null && kb.wKey.isPressed) || Input.GetKey(KeyCode.W)) vertical += 1f;
             if ((kb != null && kb.sKey.isPressed) || Input.GetKey(KeyCode.S)) vertical -= 1f;
             if ((kb != null && kb.aKey.isPressed) || Input.GetKey(KeyCode.A)) horizontal -= 1f;
             if ((kb != null && kb.dKey.isPressed) || Input.GetKey(KeyCode.D)) horizontal += 1f;
+            if ((kb != null && kb.qKey.isPressed) || Input.GetKey(KeyCode.Q)) horizontal -= sharpSteerMultiplier;
+            if ((kb != null && kb.eKey.isPressed) || Input.GetKey(KeyCode.E)) horizontal += sharpSteerMultiplier;
         }
         else
         {
-            // Player 2: Arrow Keys
+            // Player 2: Arrow Keys (K/L for sharper turns)
             if ((kb != null && kb.upArrowKey.isPressed) || Input.GetKey(KeyCode.UpArrow)) vertical += 1f;
             if ((kb != null && kb.downArrowKey.isPressed) || Input.GetKey(KeyCode.DownArrow)) vertical -= 1f;
             if ((kb != null && kb.leftArrowKey.isPressed) || Input.GetKey(KeyCode.LeftArrow)) horizontal -= 1f;
             if ((kb != null && kb.rightArrowKey.isPressed) || Input.GetKey(KeyCode.RightArrow)) horizontal += 1f;
+            if ((kb != null && kb.kKey.isPressed) || Input.GetKey(KeyCode.K)) horizontal -= sharpSteerMultiplier;
+            if ((kb != null && kb.lKey.isPressed) || Input.GetKey(KeyCode.L)) horizontal += sharpSteerMultiplier;
         }
 
         moveInput = new Vector2(horizontal, vertical);
