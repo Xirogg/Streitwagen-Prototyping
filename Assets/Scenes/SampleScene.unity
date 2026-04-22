@@ -1579,6 +1579,7 @@ GameObject:
   - component: {fileID: 204221322}
   - component: {fileID: 204221324}
   - component: {fileID: 204221323}
+  - component: {fileID: 204221326}
   m_Layer: 0
   m_Name: HorsePair_P2
   m_TagString: Player
@@ -1684,6 +1685,24 @@ Transform:
   - {fileID: 2035138975}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: -87.537, z: 0}
+--- !u!114 &204221326
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 204221321}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be20acc8e174c2b40b65e7aad973c5ad, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HorseVisuals
+  playerIndex: 0
+  leftHorse: {fileID: 1728652677}
+  rightHorse: {fileID: 204221325}
+  maxTurnAngle: 18
+  turnInSpeed: 8
+  returnSpeed: 6
 --- !u!1001 &228268784
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -15728,6 +15747,7 @@ GameObject:
   - component: {fileID: 2136642609}
   - component: {fileID: 2136642611}
   - component: {fileID: 2136642610}
+  - component: {fileID: 2136642613}
   m_Layer: 0
   m_Name: HorsePair_P1
   m_TagString: Player
@@ -15833,6 +15853,24 @@ Transform:
   - {fileID: 423871235}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: -87.537, z: 0}
+--- !u!114 &2136642613
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2136642608}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be20acc8e174c2b40b65e7aad973c5ad, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HorseVisuals
+  playerIndex: 0
+  leftHorse: {fileID: 1324032157}
+  rightHorse: {fileID: 1661434139}
+  maxTurnAngle: 18
+  turnInSpeed: 8
+  returnSpeed: 6
 --- !u!21 &2140730197
 Material:
   serializedVersion: 8
