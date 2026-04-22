@@ -27,6 +27,13 @@ public class ChariotPhysics : MonoBehaviour
     private Rigidbody rb;
     private ConfigurableJoint joint;
     private float debugTimer;
+    private HorseController ownerController;
+
+    /// <summary>
+    /// Referenz auf das Pferde-Rigidbody dieses Spielers — wird für Ram-Checks gebraucht,
+    /// damit der andere Spieler erkennen kann zu wem der getroffene Wagen gehört.
+    /// </summary>
+    public Rigidbody HorsePairRigidbody => horsePairRb;
 
     private void Awake()
     {
@@ -113,6 +120,20 @@ public class ChariotPhysics : MonoBehaviour
 
         Debug.Log($"[ChariotPhysics] Joint setup complete! " +
                   $"Yaw limit={yawLimit}, Spring={yawSpring}, Damper={yawDamper}");
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        // Wagen-Kollision an den HorseController des eigenen Spielers weiterleiten,
+        // damit auch ein Wagen-gegen-Wagen oder Wagen-gegen-Pferde Treffer als Ram gewertet wird.
+        if (ownerController == null && horsePairRb != null)
+        {
+            ownerController = horsePairRb.GetComponent<HorseController>();
+        }
+        if (ownerController != null)
+        {
+            ownerController.HandleChariotCollision(collision);
+        }
     }
 
     private void FixedUpdate()
