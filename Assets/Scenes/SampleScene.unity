@@ -1633,7 +1633,16 @@ MonoBehaviour:
   maxAngularVelocity: 2
   sharpSteerMultiplier: 1.4
   lateralDampingForce: 500
+  ramImpulsePerSpeed: 320
+  ramBaseImpulse: 1200
+  ramChariotImpulseRatio: 0.8
+  minRamClosingSpeed: 2
+  sharpSteerRamMultiplier: 2.6
+  ramLateralBias: 0.45
+  ramAngularImpulseFactor: 0.18
+  ramCooldown: 0.15
   debugLog: 0
+  debugLogRam: 1
 --- !u!136 &204221324
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -15773,7 +15782,16 @@ MonoBehaviour:
   maxAngularVelocity: 2
   sharpSteerMultiplier: 1.4
   lateralDampingForce: 500
+  ramImpulsePerSpeed: 800
+  ramBaseImpulse: 1200
+  ramChariotImpulseRatio: 0.8
+  minRamClosingSpeed: 2
+  sharpSteerRamMultiplier: 2.6
+  ramLateralBias: 0.45
+  ramAngularImpulseFactor: 0.18
+  ramCooldown: 0.15
   debugLog: 0
+  debugLogRam: 1
 --- !u!136 &2136642611
 CapsuleCollider:
   m_ObjectHideFlags: 0
