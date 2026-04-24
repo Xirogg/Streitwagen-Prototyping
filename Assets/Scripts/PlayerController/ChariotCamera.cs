@@ -52,6 +52,7 @@ public class ChariotCamera : MonoBehaviour
         {
             targetRb = target.GetComponent<Rigidbody>();
         }
+        if (cam != null) cam.fieldOfView = baseFOV;
     }
 
     private void LateUpdate()
