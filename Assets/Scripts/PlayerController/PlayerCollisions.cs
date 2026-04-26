@@ -46,12 +46,37 @@ public class PlayerCollisions : MonoBehaviour
     [Tooltip("Multiplikator wenn der Angreifer gerade Q/E bzw. K/L hält.")]
     [SerializeField] private float sharpSteerMultiplier = 1.8f;
 
+    [Header("Ram (Q/E ohne A/D)")]
+    [Tooltip("Wie lange (s) der Spieler den Gegner durchgehend mit Q/E rammen muss damit der Ram \"trifft\".")]
+    [SerializeField] private float ramHoldDuration = 2f;
+    [Tooltip("Wie lange (s) ohne Kontakt toleriert wird bevor der Akku zurückgesetzt wird.")]
+    [SerializeField] private float ramContactGrace = 0.15f;
+    [Tooltip("Prefab das beim erfolgreichen Ram am Endpunkt der Kollision gespawnt wird (z.B. Debris).")]
+    [SerializeField] private GameObject ramDebrisPrefab;
+    [Tooltip("Optional: Cooldown (s) zwischen zwei erfolgreichen Rams gegen denselben Gegner.")]
+    [SerializeField] private float ramSuccessCooldown = 1f;
+
     [Header("Debug")]
     [SerializeField] private bool debugLog = true;
 
     private Rigidbody rb;
     private HorseController horseController;
     private float lastRamTime = -999f;
+
+    // --- Ram-State ---
+    private Rigidbody ramTargetHorseRb;
+    private Rigidbody ramTargetChariotRb;
+    private float ramAccumTime;
+    private float lastRamContactTime = -999f;
+    private Vector3 lastRamContactPoint;
+    private float lastRamSuccessTime = -999f;
+
+    /// <summary>
+    /// Wird gefeuert sobald ein Ram erfolgreich war (≥ ramHoldDuration durchgehend Kontakt).
+    /// Empfänger können hier die Schadenslogik anhängen.
+    /// Args: opfer-Pferde-Rigidbody, opfer-Wagen-Rigidbody (kann null sein), Endpunkt der Kollision.
+    /// </summary>
+    public event System.Action<Rigidbody, Rigidbody, Vector3> OnRamSuccess;
 
     private void Awake()
     {
@@ -64,6 +89,11 @@ public class PlayerCollisions : MonoBehaviour
         TryRam(collision);
     }
 
+    private void OnCollisionStay(Collision collision)
+    {
+        TrackRamProgress(collision);
+    }
+
     /// <summary>
     /// Wird von ChariotPhysics aufgerufen wenn der eigene Wagen mit etwas kollidiert.
     /// </summary>
@@ -72,10 +102,107 @@ public class PlayerCollisions : MonoBehaviour
         TryRam(collision);
     }
 
+    /// <summary>
+    /// Wird von ChariotPhysics jeden FixedUpdate aufgerufen während der Wagen mit etwas in Kontakt ist.
+    /// </summary>
+    public void HandleChariotCollisionStay(Collision collision)
+    {
+        TrackRamProgress(collision);
+    }
+
+    private void FixedUpdate()
+    {
+        UpdateRamTimer();
+    }
+
+    private void UpdateRamTimer()
+    {
+        // Im Ram-Modus muss der Spieler den Q/E-Knopf halten UND durchgehend Kontakt haben.
+        bool ramming = horseController != null && horseController.IsRamAttempting;
+        if (!ramming)
+        {
+            ResetRam();
+            return;
+        }
+
+        // Wenn der letzte Kontakt zu lange her ist, beginnen wir wieder bei 0.
+        if (Time.time - lastRamContactTime > ramContactGrace)
+        {
+            ResetRam();
+            return;
+        }
+
+        ramAccumTime += Time.fixedDeltaTime;
+        if (ramAccumTime >= ramHoldDuration)
+        {
+            CompleteRam();
+        }
+    }
+
+    private void TrackRamProgress(Collision collision)
+    {
+        if (rb == null) return;
+        if (horseController == null || !horseController.IsRamAttempting) return;
+        if (Time.time - lastRamSuccessTime < ramSuccessCooldown) return;
+
+        Rigidbody otherHorseRb;
+        Rigidbody otherChariotRb;
+        FindOtherPlayerBodies(collision.collider, out otherHorseRb, out otherChariotRb);
+        if (otherHorseRb == null || otherHorseRb == rb) return;
+
+        // Wechsel des Gegners → Akku zurücksetzen
+        if (ramTargetHorseRb != otherHorseRb)
+        {
+            ramTargetHorseRb = otherHorseRb;
+            ramTargetChariotRb = otherChariotRb;
+            ramAccumTime = 0f;
+        }
+        else if (otherChariotRb != null)
+        {
+            ramTargetChariotRb = otherChariotRb;
+        }
+
+        ContactPoint contact = collision.GetContact(0);
+        lastRamContactPoint = contact.point;
+        lastRamContactTime = Time.time;
+    }
+
+    private void CompleteRam()
+    {
+        Vector3 endpoint = lastRamContactPoint;
+
+        if (ramDebrisPrefab != null)
+        {
+            Instantiate(ramDebrisPrefab, endpoint, Quaternion.identity);
+        }
+
+        // Hook für Schadenslogik — bewusst leer gelassen, Receiver kann hier ansetzen.
+        OnRamSuccess?.Invoke(ramTargetHorseRb, ramTargetChariotRb, endpoint);
+
+        if (debugLog)
+        {
+            string victim = ramTargetHorseRb != null ? ramTargetHorseRb.name : "?";
+            Debug.Log($"[PlayerCollisions {name}] RAM SUCCESS gegen {victim} bei {endpoint}");
+        }
+
+        lastRamSuccessTime = Time.time;
+        ResetRam();
+    }
+
+    private void ResetRam()
+    {
+        ramTargetHorseRb = null;
+        ramTargetChariotRb = null;
+        ramAccumTime = 0f;
+    }
+
     private void TryRam(Collision collision)
     {
         if (rb == null) return;
         if (Time.time - lastRamTime < cooldown) return;
+        // Im Ram-Modus (Q/E ohne A/D) keinen Friendslop-Schubs auslösen — sonst fliegt das Opfer
+        // sofort weg und der 2-Sekunden-Kontakt kann nie zustande kommen.
+        if (horseController != null && horseController.IsRamAttempting) return;
 
         Rigidbody otherHorseRb;
         Rigidbody otherChariotRb;

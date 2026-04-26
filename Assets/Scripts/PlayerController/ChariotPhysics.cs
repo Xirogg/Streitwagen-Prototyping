@@ -126,13 +126,28 @@ public class ChariotPhysics : MonoBehaviour
     {
         // Wagen-Kollision an die PlayerCollisions des eigenen Spielers weiterleiten,
         // damit auch ein Wagen-gegen-Wagen oder Wagen-gegen-Pferde Treffer als Ram gewertet wird.
-        if (ownerCollisions == null && horsePairRb != null)
-        {
-            ownerCollisions = horsePairRb.GetComponent<PlayerCollisions>();
-        }
+        EnsureOwnerCollisions();
         if (ownerCollisions != null)
         {
             ownerCollisions.HandleChariotCollision(collision);
+        }
+    }
+
+    private void OnCollisionStay(Collision collision)
+    {
+        // Während der Kontakt anhält, an PlayerCollisions weitergeben — wird für die Ram-Akkumulation
+        // (Q/E ohne A/D, 2 Sekunden Kontakt) gebraucht.
+        EnsureOwnerCollisions();
+        if (ownerCollisions != null)
+        {
+            ownerCollisions.HandleChariotCollisionStay(collision);
+        }
+    }
+
+    private void EnsureOwnerCollisions()
+    {
+        if (ownerCollisions == null && horsePairRb != null)
+        {
         }
     }
 

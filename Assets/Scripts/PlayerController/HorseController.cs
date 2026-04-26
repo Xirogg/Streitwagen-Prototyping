@@ -34,10 +34,23 @@ public class HorseController : MonoBehaviour
     private float speedMultiplier = 1f;
 
     /// <summary>
-    /// True solange der Spieler Q/E (P1) bzw. K/L (P2) drückt — also den scharfen Lenk-Input.
-    /// Wird im Ram-Check benutzt um den Schubs deutlich zu verstärken.
+    /// True solange der Spieler A/D (bzw. Pfeile) UND zusätzlich Q/E (bzw. K/L) drückt.
+    /// Das ist der "scharf einlenken"-Modus — Q/E verstärkt das Lenken nur dann.
     /// </summary>
     public bool IsSharpSteering { get; private set; }
+
+    /// <summary>
+    /// True wenn der Spieler Q/E (bzw. K/L) drückt OHNE gleichzeitig A/D (bzw. Pfeile links/rechts) zu halten.
+    /// In diesem Fall wird nicht gelenkt — stattdessen versucht der Spieler einen Wagen zu rammen
+    /// (siehe PlayerCollisions).
+    /// </summary>
+    public bool IsRamAttempting { get; private set; }
+
+    /// <summary>
+    /// Vorzeichen der Q/E (bzw. K/L) Eingabe: -1 = links (Q/K), +1 = rechts (E/L), 0 = keine.
+    /// Wird von PlayerCollisions nicht direkt benötigt, kann aber für VFX/Audio nützlich sein.
+    /// </summary>
+    public float RamDirection { get; private set; }
 
     public static bool MovementEnabled { get; set; } = true;
 
@@ -79,37 +92,61 @@ public class HorseController : MonoBehaviour
         {
             moveInput = Vector2.zero;
             IsSharpSteering = false;
+            IsRamAttempting = false;
+            RamDirection = 0f;
             return;
         }
 
         // Try new Input System first, fall back to legacy Input.GetKey
         // (some laptop keyboards don't register all keys via the new system)
         Keyboard kb = Keyboard.current;
-        bool sharpPressed = false;
+
+        float lateralInput = 0f;     // A/D bzw. Pfeile links/rechts
+        float sharpInputDir = 0f;    // Q/E bzw. K/L, -1 links / +1 rechts
 
         if (playerIndex == 0)
         {
-            // Player 1: WASD (Q/E for sharper turns)
             if ((kb != null && kb.wKey.isPressed) || Input.GetKey(KeyCode.W)) vertical += 1f;
             if ((kb != null && kb.sKey.isPressed) || Input.GetKey(KeyCode.S)) vertical -= 1f;
-            if ((kb != null && kb.aKey.isPressed) || Input.GetKey(KeyCode.A)) horizontal -= 1f;
-            if ((kb != null && kb.dKey.isPressed) || Input.GetKey(KeyCode.D)) horizontal += 1f;
-            if ((kb != null && kb.qKey.isPressed) || Input.GetKey(KeyCode.Q)) { horizontal -= sharpSteerMultiplier; sharpPressed = true; }
-            if ((kb != null && kb.eKey.isPressed) || Input.GetKey(KeyCode.E)) { horizontal += sharpSteerMultiplier; sharpPressed = true; }
+            if ((kb != null && kb.aKey.isPressed) || Input.GetKey(KeyCode.A)) lateralInput -= 1f;
+            if ((kb != null && kb.dKey.isPressed) || Input.GetKey(KeyCode.D)) lateralInput += 1f;
+            if ((kb != null && kb.qKey.isPressed) || Input.GetKey(KeyCode.Q)) sharpInputDir -= 1f;
+            if ((kb != null && kb.eKey.isPressed) || Input.GetKey(KeyCode.E)) sharpInputDir += 1f;
         }
         else
         {
-            // Player 2: Arrow Keys (K/L for sharper turns)
             if ((kb != null && kb.upArrowKey.isPressed) || Input.GetKey(KeyCode.UpArrow)) vertical += 1f;
             if ((kb != null && kb.downArrowKey.isPressed) || Input.GetKey(KeyCode.DownArrow)) vertical -= 1f;
-            if ((kb != null && kb.leftArrowKey.isPressed) || Input.GetKey(KeyCode.LeftArrow)) horizontal -= 1f;
-            if ((kb != null && kb.rightArrowKey.isPressed) || Input.GetKey(KeyCode.RightArrow)) horizontal += 1f;
-            if ((kb != null && kb.kKey.isPressed) || Input.GetKey(KeyCode.K)) { horizontal -= sharpSteerMultiplier; sharpPressed = true; }
-            if ((kb != null && kb.lKey.isPressed) || Input.GetKey(KeyCode.L)) { horizontal += sharpSteerMultiplier; sharpPressed = true; }
+            if ((kb != null && kb.leftArrowKey.isPressed) || Input.GetKey(KeyCode.LeftArrow)) lateralInput -= 1f;
+            if ((kb != null && kb.rightArrowKey.isPressed) || Input.GetKey(KeyCode.RightArrow)) lateralInput += 1f;
+            if ((kb != null && kb.kKey.isPressed) || Input.GetKey(KeyCode.K)) sharpInputDir -= 1f;
+            if ((kb != null && kb.lKey.isPressed) || Input.GetKey(KeyCode.L)) sharpInputDir += 1f;
+        }
+
+        bool sharpPressed = Mathf.Abs(sharpInputDir) > 0.01f;
+        bool lateralPressed = Mathf.Abs(lateralInput) > 0.01f;
+
+        // Q/E ohne A/D = Ram-Versuch, kein Lenken
+        bool ramAttempt = sharpPressed && !lateralPressed;
+
+        if (ramAttempt)
+        {
+            horizontal = 0f;
+        }
+        else if (sharpPressed && lateralPressed)
+        {
+            // beides zusammen = scharf einlenken (verstärkt in Richtung des sharp-Inputs)
+            horizontal = lateralInput + sharpInputDir * sharpSteerMultiplier;
+        }
+        else
+        {
+            horizontal = lateralInput;
         }
 
         moveInput = new Vector2(horizontal, vertical);
-        IsSharpSteering = sharpPressed;
+        IsSharpSteering = sharpPressed && lateralPressed;
+        IsRamAttempting = ramAttempt;
+        RamDirection = sharpInputDir;
 
         // Apply forces from Update as well to ensure responsiveness
         // (forces accumulate and are resolved in the next physics step)
