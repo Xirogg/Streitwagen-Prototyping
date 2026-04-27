@@ -28,6 +28,7 @@ public class ChariotPhysics : MonoBehaviour
     private ConfigurableJoint joint;
     private float debugTimer;
     private PlayerCollisions ownerCollisions;
+    private HorseRamController ownerRam;
 
     /// <summary>
     /// Referenz auf das Pferde-Rigidbody dieses Spielers — wird für Ram-Checks gebraucht,
@@ -135,19 +136,26 @@ public class ChariotPhysics : MonoBehaviour
 
     private void OnCollisionStay(Collision collision)
     {
-        // Während der Kontakt anhält, an PlayerCollisions weitergeben — wird für die Ram-Akkumulation
-        // (Q/E ohne A/D, 2 Sekunden Kontakt) gebraucht.
+        // Wagen-Kontakt für die Ram-Akkumulation (Q/E ohne A/D, 2 Sekunden Kontakt) an
+        // HorseRamController weitergeben. PlayerCollisions wird hier bewusst nicht informiert,
+        // damit die Friendslop-Knockback-Logik unangetastet in OnCollisionEnter bleibt.
         EnsureOwnerCollisions();
-        if (ownerCollisions != null)
+        if (ownerRam != null)
         {
-            ownerCollisions.HandleChariotCollisionStay(collision);
+            ownerRam.HandleChariotCollisionStay(collision);
         }
     }
 
     private void EnsureOwnerCollisions()
     {
-        if (ownerCollisions == null && horsePairRb != null)
+        if (horsePairRb == null) return;
+        if (ownerCollisions == null)
         {
+            ownerCollisions = horsePairRb.GetComponent<PlayerCollisions>();
+        }
+        if (ownerRam == null)
+        {
+            ownerRam = horsePairRb.GetComponent<HorseRamController>();
         }
     }
 
