@@ -18,6 +18,11 @@ public class AutoChariot : MonoBehaviour
     [Tooltip("Konstante Vorwärtsgeschwindigkeit in m/s.")]
     [SerializeField] private float speed = 8f;
 
+    [Tooltip("Verzögerung in Sekunden, bevor der Wagen losfährt (z. B. für Countdown).")]
+    [SerializeField] private float startDelay = 5f;
+
+    private float startTimer;
+
     [Header("Control Override")]
     [Tooltip("Deaktiviert den HorseController auf diesem GameObject, damit Tastatureingabe diesen Wagen nicht steuert.")]
     [SerializeField] private bool disablePlayerControl = true;
@@ -39,6 +44,7 @@ public class AutoChariot : MonoBehaviour
     private void Start()
     {
         driveDirection = transform.forward;
+        startTimer = 0f;
 
         if (disablePlayerControl && horseController != null)
         {
@@ -49,6 +55,17 @@ public class AutoChariot : MonoBehaviour
     private void FixedUpdate()
     {
         if (!autoDrive || rb == null) return;
+
+        if (startTimer < startDelay)
+        {
+            startTimer += Time.fixedDeltaTime;
+
+            // Während des Countdowns am Platz halten.
+            Vector3 vHold = rb.linearVelocity;
+            rb.linearVelocity = new Vector3(0f, vHold.y, 0f);
+            rb.angularVelocity = Vector3.zero;
+            return;
+        }
 
         if (lockToStraightLine)
         {
