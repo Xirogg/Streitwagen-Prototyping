@@ -550,7 +550,7 @@ Transform:
   m_GameObject: {fileID: 76770091}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0.6917449, z: -0, w: 0.722142}
-  m_LocalPosition: {x: 0.03, y: 0.75, z: 22.17}
+  m_LocalPosition: {x: 54.28, y: 0.75, z: 22.126}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1658,6 +1658,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HorseController
   playerIndex: 1
+  bindings:
+    forward: 119
+    backward: 115
+    left: 97
+    right: 100
+    sharpLeft: 113
+    sharpRight: 101
+  autoBindFromPlayerIndex: 1
   pullForce: 3000
   maxSpeed: 15
   brakeForce: 2000
@@ -1698,7 +1706,7 @@ Transform:
   m_GameObject: {fileID: 204221321}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0.6917449, z: -0, w: 0.722142}
-  m_LocalPosition: {x: -6.75, y: 1, z: 19.5}
+  m_LocalPosition: {x: 47.5, y: 1, z: 19.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -11254,6 +11262,7 @@ GameObject:
   - component: {fileID: 1459831487}
   - component: {fileID: 1459831486}
   - component: {fileID: 1459831490}
+  - component: {fileID: 1459831491}
   m_Layer: 0
   m_Name: ChariotBody_P2
   m_TagString: Player
@@ -11270,7 +11279,7 @@ Transform:
   m_GameObject: {fileID: 1459831484}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0.6917449, z: -0, w: 0.722142}
-  m_LocalPosition: {x: -0.35000038, y: 0.75, z: 19.61}
+  m_LocalPosition: {x: 53.9, y: 0.75, z: 19.61}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -11482,6 +11491,23 @@ MonoBehaviour:
   cooldown: 0.2
   sharpSteerMultiplier: 1.8
   debugLog: 1
+--- !u!114 &1459831491
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1459831484}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 521b52f5fde2353448186a3cd8c48158, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AutoChariot
+  autoDrive: 1
+  speed: 8
+  startDelay: 5
+  disablePlayerControl: 1
+  lockToStraightLine: 0
 --- !u!21 &1483744026
 Material:
   serializedVersion: 8
@@ -16047,6 +16073,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HorseController
   playerIndex: 0
+  bindings:
+    forward: 119
+    backward: 115
+    left: 97
+    right: 100
+    sharpLeft: 113
+    sharpRight: 101
+  autoBindFromPlayerIndex: 1
   pullForce: 5000
   maxSpeed: 15
   brakeForce: 2000
@@ -16087,7 +16121,7 @@ Transform:
   m_GameObject: {fileID: 2136642608}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0.6917449, z: -0, w: 0.722142}
-  m_LocalPosition: {x: -6, y: 1, z: 22.78}
+  m_LocalPosition: {x: 48.25, y: 1, z: 22.736}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -16126,14 +16160,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 22d37bb1a70168149907046983bb1bbd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HorseRamController
-  ramHoldDuration: 2
-  ramContactGrace: 0.15
+  ramHoldDuration: 1
+  ramContactGrace: 2
   ramSuccessCooldown: 1
-  maxRamDistance: 8
+  maxRamDistance: 15
   playerTag: Player
   cachePlayerList: 1
   forwardDotThreshold: -0.25
-  ramDebrisPrefab: {fileID: 6591703658306425425, guid: ba89d2a4ea2703349954385ece0763e4, type: 3}
+  ramDebrisPrefab: {fileID: 2549053125962428352, guid: ce319609913f279419a080f8dffa09a0, type: 3}
   debugLog: 1
   drawGizmos: 1
 --- !u!21 &2140730197

@@ -211,7 +211,9 @@ public class HorseRamController : MonoBehaviour
 
         if (ramDebrisPrefab != null)
         {
-            Instantiate(ramDebrisPrefab, endpoint, Quaternion.identity);
+            // Etwas hinter den Streitwagen versetzt spawnen — vorerst simpel via +1 auf x.
+            Vector3 spawnPos = endpoint + new Vector3(1f, 0f, 0f);
+            Instantiate(ramDebrisPrefab, spawnPos, Quaternion.identity);
         }
 
         // Schaden-Hook — die eigentliche Schadenslogik wird woanders implementiert.
